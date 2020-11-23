@@ -82,7 +82,7 @@ for ( n, o, i ) in tifffuns
     f = """
     $n( $(args[1:end-1]...) ) = ccall( (:$n,"libtiff"), $o, $i, $(vars[1:end-1]...) ); 
     """
-    println( f ) # uncomment to see what the automated function code looks like
+    # println( f ) # uncomment to see what the automated function code looks like
     eval( Meta.parse( f ) )
 end
 
@@ -143,21 +143,49 @@ end
 
 """ READING SCANLINE TIFFs """
 
-function tiffread(f::TIFFFile{Scanline,N}) where {N}
-	return ( tiff_samplesperpixel(f) > 1 ) ? read_rgba_scanline(f) : read_scanline(f);  
+function tiffread(f::TIFFFile{Scanline,N}; typ=nothing, sample=1 ) where {N}
+	return ( tiff_samplesperpixel(f) > 1 ) ? read_rgba_scanline(f) : read_scanline(f, typ=typ, sample=sample );  
 end
 
-function read_scanline(f::TIFFFile{Scanline,N}) where {N}
-	data = zeros( eltype(f),    f.dims    )
-    buff = zeros( eltype(f), 1, f.dims[2] )
-	maxZ = ( N == 2 ) ? 0 : f.dims[3] - 1; 
-	for z = 0:maxZ
-		TIFFSetDirectory( f.fptr, Cushort(z) ) 
-		for r = 1:f.dims[1]
-			TIFFReadScanline( f.fptr, buff, Cint(r-1), Cint(0) )
-		    data[r, :, z+1] = buff'	
+function read_scanline(f::TIFFFile{Scanline,N}; typ=nothing, sample=1 ) where {N}
+	if typ == nothing
+		typ = eltype(f)
+	end 
+
+	# vertical, horizontal and depth indices
+	vids = collect(1:sample:f.dims[1])
+	hids = 1:sample:f.dims[2]
+	dids = 1:sample:f.dims[3]
+
+	# dims after considering sampling
+	sdims = ( length(vids), length(hids), length(dids) ); 
+
+	data = zeros(   typ    ,   sdims   ); 
+    buff = zeros( eltype(f), 1, f.dims[2] );
+
+	maxZ = ( N == 2 ) ? 1 : f.dims[3] - 1; 
+
+	zi = 1; 
+	for z = 1:sample:maxZ
+
+		TIFFSetDirectory( f.fptr, Cushort(z-1) )
+ 
+		ri = 1; 
+		for r = 1:vids[end]
+
+			TIFFReadScanline( f.fptr, buff, Cint(r-1), Cint(0) ); 
+
+			if r == vids[ri]
+
+		    	data[ri, :, zi] = convert.( typ, buff[hids] )
+
+				ri += 1;
+			end
 		end
+
+	zi += 1;
 	end
+
     return data
 end
 
@@ -173,7 +201,7 @@ end
 """ READING TILED TIFFs """
 # Images are divided into squares, tiles, of size n*16. Each tile has coordinates (x,y) where x and y are between 0:imgWidth÷tileWidth and 0:imgHeight÷tileHeight. Generally, one can restrict image loading to a rectangle by providing (minCol, maxCol, minRow, maxRow) and setting x and y between minCol÷tileWidth:maxCol÷tileWidth and minRow÷tileWidth:maxRow÷tileWidth
 
-function tiffread(f::TIFFFile{Tile,2})
+function tiffread(f::TIFFFile{Tile,2}; typ=nothing, sample=1 )
 	return read_tile(f, 1:f.dims[1], 1:f.dims[2])
 end
 
@@ -206,9 +234,9 @@ end
 
 """ GENERAL READING INTERFACE """ 
 
-function tiffread(filename::String)
+function tiffread(filename::String; typ=nothing, sample=1 )
 	f = tiffopen(filename)
-	data = tiffread(f)
+	data = tiffread(f, typ=typ, sample=sample )
 	tiffclose(f)
     return data
 end

@@ -2,14 +2,14 @@
 
 """ GENERAL READING INTERFACE """ 
 
-function tiffread( filename::String; typ=nothing, sample=1 )
+function tiffread( filename::String; typ=nothing, sample=ones(Int64,N) )
 	f    = tiffopen(filename)
 	data = tiffread(f, typ=typ, sample=sample )
 	tiffclose(f)
     return data
 end
 
-function tiffread!( data, filename::String; typ=nothing, sample=1 )
+function tiffread!( data, filename::String; typ=nothing, sample=ones(Int64,N) )
 	f = tiffopen(filename)
 	data = tiffread!( data, f, typ=typ, sample=sample )
 	tiffclose(f)
@@ -19,15 +19,15 @@ end
 
 """ READING SCANLINE TIFFs """
 
-function tiffread( f::TIFFFile{Scanline,N}; typ=nothing, sample=(1,1,1) ) where {N}
+function tiffread( f::TIFFFile{Scanline,N}; typ=nothing, sample=ones(Int64,N) ) where {N}
 	return ( tiff_samplesperpixel(f) > 1 ) ? read_rgba_scanline(f) : read_scanline(f, typ=typ, sample=sample );  
 end
 
-function tiffread!( data, f::TIFFFile{Scanline,N}; typ=nothing, sample=(1,1,1) ) where {N}
+function tiffread!( data, f::TIFFFile{Scanline,N}; typ=nothing, sample=ones(Int64,N) ) where {N}
 	return ( tiff_samplesperpixel(f) > 1 ) ? read_rgba_scanline!(data, f) : read_scanline!(data, f, typ=typ, sample=sample );  
 end
 
-function read_scanline( f::TIFFFile{Scanline,N}; typ=nothing, sample=(1,1,1) ) where {N}
+function read_scanline( f::TIFFFile{Scanline,N}; typ=nothing, sample=ones(Int64,N) ) where {N}
 
     typ = ( typ == nothing ) ? eltype(f) : typ; 
 
@@ -45,7 +45,7 @@ function read_scanline( f::TIFFFile{Scanline,N}; typ=nothing, sample=(1,1,1) ) w
     return read_scanline!( data, f, typ=typ, sample=sample ); 
 end
 
-function read_scanline!( data, f::TIFFFile{Scanline,N}; typ=nothing, sample=(1,1,1) ) where {N}
+function read_scanline!( data, f::TIFFFile{Scanline,N}; typ=nothing, sample=ones(Int64,N) ) where {N}
 
     typ  = ( typ == nothing ) ? eltype(f) : typ; 
 	maxZ = ( N == 2 ) ? 1 : f.dims[3]; 
@@ -101,7 +101,7 @@ end
 """ READING TILED TIFFs """
 # Images are divided into squares, tiles, of size n*16. Each tile has coordinates (x,y) where x and y are between 0:imgWidth÷tileWidth and 0:imgHeight÷tileHeight. Generally, one can restrict image loading to a rectangle by providing (minCol, maxCol, minRow, maxRow) and setting x and y between minCol÷tileWidth:maxCol÷tileWidth and minRow÷tileWidth:maxRow÷tileWidth
 
-function tiffread(f::TIFFFile{Tile,2}; typ=nothing, sample=1 )
+function tiffread(f::TIFFFile{Tile,2}; typ=nothing, sample=ones(Int64,N) )
 	return read_tile(f, 1:f.dims[1], 1:f.dims[2])
 end
 

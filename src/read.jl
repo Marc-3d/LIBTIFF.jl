@@ -19,15 +19,15 @@ end
 
 """ READING SCANLINE TIFFs """
 
-function tiffread( f::TIFFFile{Scanline,N}; typ=nothing, sample=1 ) where {N}
+function tiffread( f::TIFFFile{Scanline,N}; typ=nothing, sample=(1,1,1) ) where {N}
 	return ( tiff_samplesperpixel(f) > 1 ) ? read_rgba_scanline(f) : read_scanline(f, typ=typ, sample=sample );  
 end
 
-function tiffread!( data, f::TIFFFile{Scanline,N}; typ=nothing, sample=1 ) where {N}
+function tiffread!( data, f::TIFFFile{Scanline,N}; typ=nothing, sample=(1,1,1) ) where {N}
 	return ( tiff_samplesperpixel(f) > 1 ) ? read_rgba_scanline!(data, f) : read_scanline!(data, f, typ=typ, sample=sample );  
 end
 
-function read_scanline( f::TIFFFile{Scanline,N}; typ=nothing, sample=1 ) where {N}
+function read_scanline( f::TIFFFile{Scanline,N}; typ=nothing, sample=(1,1,1) ) where {N}
 
     typ = ( typ == nothing ) ? eltype(f) : typ; 
 
@@ -45,7 +45,7 @@ function read_scanline( f::TIFFFile{Scanline,N}; typ=nothing, sample=1 ) where {
     return read_scanline!( data, f, typ=typ, sample=sample ); 
 end
 
-function read_scanline!( data, f::TIFFFile{Scanline,N}; typ=nothing, sample=1 ) where {N}
+function read_scanline!( data, f::TIFFFile{Scanline,N}; typ=nothing, sample=(1,1,1) ) where {N}
 
     typ  = ( typ == nothing ) ? eltype(f) : typ; 
 	maxZ = ( N == 2 ) ? 1 : f.dims[3]; 

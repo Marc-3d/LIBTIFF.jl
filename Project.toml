@@ -2,3 +2,6 @@ name = "LIBTIFF"
 uuid = "70b51d67-c487-4396-b38c-3fc6acfb5994"
 authors = ["marc "]
 version = "0.1.0"
+
+[deps]
+Libtiff_jll = "89763e89-9b03-5906-acba-b20f662cd828"

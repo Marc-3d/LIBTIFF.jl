@@ -1,15 +1,17 @@
+Int_Range = Union{UnitRange{Int},Int}; 
+
 # Only grayscale scanline tiffs have been tested so far, so do not trust read_rga_scanline or read_tile
 
 """ GENERAL READING INTERFACE """ 
 
-function tiffread( filename::String; typ=nothing, sample=ones(Int64,N) )
+function tiffread( filename::String; typ=nothing, sample=ones(Int64,3) )
 	f    = tiffopen(filename)
 	data = tiffread(f, typ=typ, sample=sample )
 	tiffclose(f)
     return data
 end
 
-function tiffread!( data, filename::String; typ=nothing, sample=ones(Int64,N) )
+function tiffread!( data, filename::String; typ=nothing, sample=ones(Int64,3) )
 	f = tiffopen(filename)
 	data = tiffread!( data, f, typ=typ, sample=sample )
 	tiffclose(f)
@@ -20,11 +22,11 @@ end
 """ READING SCANLINE TIFFs """
 
 function tiffread( f::TIFFFile{Scanline,N}; typ=nothing, sample=ones(Int64,N) ) where {N}
-	return ( tiff_samplesperpixel(f) > 1 ) ? read_rgba_scanline(f) : read_scanline(f, typ=typ, sample=sample );  
+	return ( tiff_samplesperpixel(f) > 1 ) ? read_rgba_scanline(f) : read_scanline(f, typ=typ, sample=sample[1:N] );  
 end
 
 function tiffread!( data, f::TIFFFile{Scanline,N}; typ=nothing, sample=ones(Int64,N) ) where {N}
-	return ( tiff_samplesperpixel(f) > 1 ) ? read_rgba_scanline!(data, f) : read_scanline!(data, f, typ=typ, sample=sample );  
+	return ( tiff_samplesperpixel(f) > 1 ) ? read_rgba_scanline!(data, f) : read_scanline!(data, f, typ=typ, sample=sample[1:N] );  
 end
 
 function read_scanline( f::TIFFFile{Scanline,N}; typ=nothing, sample=ones(Int64,N) ) where {N}

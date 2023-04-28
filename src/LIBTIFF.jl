@@ -1,5 +1,9 @@
 module LIBTIFF
 
+using Libtiff_jll
+
+libtiff_path = replace( Libtiff_jll.libtiff, "\\" => "/" ); 
+
 import Base: eltype, size, getindex, summary
 export TIFFFile, tiffopen, tiffclose, tiffsize, tiffread
 # using FixedPointNumbers, ColorTypes
@@ -34,15 +38,14 @@ exceptions = Dict(  Cstring      => String,
 
 CtoJL( x::DataType ) = ( x in keys(exceptions) ) ? exceptions[x] : x ; 
 
-TIFFGetField  = (:TIFFGetField,"libtiff");
-TIFFSetField  = (:TIFFSetField,"libtiff");
-
-Int_Range  = Union{UnitRange{Int},Int}; 
-
 
 """ METAPROGRAMMING TO BRING LIBTIFF FUNCTIONS TO JULIA """
 
-# TIFFGetField acts in-place, overwriting an input array with the Field's value(s). The input must be an array because some TIFFFields return 2 or 3 values, not only 1. Because it is in-place, a variables needs to be created before each call to TIFFGetField, which results in long code. Metaprogramming is used to automate the definition of out-of-place functions for each relevant TIFFTag. 
+# TIFFGetField acts in-place, overwriting an input array with the Field's value(s). 
+# The input must be an array because some TIFFFields return 2 or 3 values, not only 1. 
+# Because it is in-place, a variables needs to be created before each call to TIFFGetField, 
+# which results in long code. Metaprogramming is used to automate the definition of out-of-place
+# functions for each relevant TIFFTag. 
 get_tag = ( 
 	( "tiff_length"          , UInt32 ,  1  ,  Cuint , 257 ), 
 	( "tiff_width"           , UInt32 ,  1  ,  Cuint , 256 ), 
@@ -54,15 +57,15 @@ get_tag = (
 	( "tiff_planarconfig"    , UInt32 ,  1  ,  Cuint , 284 ),
 )
 
-for ( p, r, a, w, n ) in get_tag 
+for ( tag_name, tag_type, num_inputs, input_type, tag_code ) in get_tag 
     f1 = """
-    function $p( h::Ptr{Cvoid} )
-	    in = ones( $r, $a );
-	    er = ccall($TIFFGetField, Cint, (Ptr{Cvoid},$w,Ptr{Cvoid}), h, $n, in);
-		( er == 0 ) && throw("Error retrieving $(p[6:end]) from tiff file")
-	    return ( $a == 1 ) ? round(Int64,in[1]) : round.(Int64,in)
+    function $tag_name( h::Ptr{Cvoid} )
+	    in = ones( $tag_type, $num_inputs );
+	    er = ccall((:TIFFGetField,"$libtiff_path"), Cint, (Ptr{Cvoid},$input_type,Ptr{Cvoid}), h, $tag_code, in);
+		( er == 0 ) && throw("Error retrieving $(tag_name[6:end]) from tiff file")
+	    return ( $num_inputs == 1 ) ? round(Int64,in[1]) : round.(Int64,in)
     end """
-	f2 = "$p(f::TIFFFile) = $p( f.fptr )"
+	f2 = "$tag_name(f::TIFFFile) = $tag_name( f.fptr )"
 	eval( Meta.parse( f1 ) ); 
 	eval( Meta.parse( f2 ) );
 end
@@ -84,7 +87,7 @@ for ( s, i, n ) in set_tag
 	[ vars = vars*" a"*string(x)*"," for x in 3:length(i) ]; 
     f1 = """
     function $s( $(args[1:end-1]...) )
-	    er = ccall($TIFFSetField, Cint, $i,  $(vars[1:end-1]...) );
+	    er = ccall((:TIFFSetField,"$libtiff_path"), Cint, $i,  $(vars[1:end-1]...) );
 		( er == 0 ) && throw("Error setting $(s[10:end]) in tiff context")
 	    return er
     end """
@@ -112,7 +115,7 @@ for ( n, o, i ) in tifffuns
     [ args = args*" a"*string(x)*"::"*string(CtoJL(i[x]))*"," for x in 1:length(i) ]; 
     [ vars = vars*" a"*string(x)*"," for x in 1:length(i) ]; 
     f = """
-    $n( $(args[1:end-1]...) ) = ccall( (:$n,"libtiff"), $o, $i, $(vars[1:end-1]...) ); 
+    $n( $(args[1:end-1]...) ) = ccall( (:$n,"$libtiff_path"), $o, $i, $(vars[1:end-1]...) ); 
     """
     # println( f ) # uncomment to see what the automated function code looks like
     eval( Meta.parse( f ) )
@@ -175,8 +178,8 @@ function ignoreWarningsExt( a, b, c )::Ptr{Cvoid}
 end
 ignoreWarningsExt_c = @cfunction( ignoreWarningsExt, Ptr{Cvoid}, ( Ptr{Cvoid}, Ptr{UInt8}, Ptr{UInt8}, Ptr{UInt8} ) ); 
 
-out = ccall( (:TIFFSetWarningHandler,"libtiff"), Ptr{Cvoid}, ( Ptr{Cvoid}, ), ignoreWarnings_c )
-out = ccall( (:TIFFSetWarningHandlerExt,"libtiff"), Ptr{Cvoid}, ( Ptr{Cvoid}, ), ignoreWarningsExt_c )
+out = ccall( (:TIFFSetWarningHandler,Libtiff_jll.libtiff), Ptr{Cvoid}, ( Ptr{Cvoid}, ), ignoreWarnings_c )
+out = ccall( (:TIFFSetWarningHandlerExt,Libtiff_jll.libtiff), Ptr{Cvoid}, ( Ptr{Cvoid}, ), ignoreWarningsExt_c )
 
 dump( out )
 

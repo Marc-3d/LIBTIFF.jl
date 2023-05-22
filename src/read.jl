@@ -33,12 +33,13 @@ function read_scanline( f::TIFFFile{Scanline,N}; typ=nothing, sample=ones(Int64,
 
     typ = ( typ == nothing ) ? eltype(f) : typ; 
 
-	maxZ = ( N == 2 ) ? 1 : f.dims[3]; 
 
 	# vertical, horizontal and depth indices
 	vids = 1:sample[1]:f.dims[1]
 	hids = 1:sample[2]:f.dims[2]
-	dids = 1:sample[3]:maxZ
+
+	maxZ = ( N == 2 ) ? 1 : f.dims[3]; 
+	dids = ( N == 2 ) ? (1:1) : (1:sample[3]:maxZ)
 
 	# dims after considering sampling
 	sdims = ( length(vids), length(hids), length(dids) ); 
@@ -50,12 +51,13 @@ end
 function read_scanline!( data, f::TIFFFile{Scanline,N}; typ=nothing, sample=ones(Int64,N) ) where {N}
 
     typ  = ( typ == nothing ) ? eltype(f) : typ; 
-	maxZ = ( N == 2 ) ? 1 : f.dims[3]; 
 
 	# vertical, horizontal and depth indices
 	vids = collect(1:sample[1]:f.dims[1])
 	hids = 1:sample[2]:f.dims[2]
-	dids = 1:sample[3]:maxZ
+
+	maxZ = ( N == 2 ) ? 1 : f.dims[3]; 
+	dids = ( N == 2 ) ? (1:1) : (1:sample[3]:maxZ)
 
     buff = zeros( eltype(f), 1, f.dims[2] );
 

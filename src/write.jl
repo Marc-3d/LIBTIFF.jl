@@ -10,7 +10,7 @@ function writeScanline( data::Array{T,N}, fn ) where {T,N}
 		LIBTIFF.tiff_set_width( tf, UInt32( w ) )
 		LIBTIFF.tiff_set_length( tf, UInt32( h ) )
 		LIBTIFF.tiff_set_subfiletype( tf, UInt32( 1 ) )
-		LIBTIFF.tiff_set_nbits( tf, UInt32( T.size * 8 ) )
+		LIBTIFF.tiff_set_nbits( tf, UInt32( sizeof(T) * 8 ) )
 		LIBTIFF.tiff_set_samplesperpixel( tf, UInt32( 1 ) )
 		LIBTIFF.tiff_set_pagenumber( tf, UInt32( z-1 ), UInt32( d ) )
 		

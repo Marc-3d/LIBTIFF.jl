@@ -18,6 +18,22 @@ function tiffread!( data, filename::String; typ=nothing, sample=ones(Int64,3) )
     return data
 end
 
+#=
+    figure out data dimensions, so that we can preallocate an array with the data's type and size for in-place tiffread!
+=#
+function pre_tiffread!( filename::String; sample=ones(Int,3) )
+
+    f = LIBTIFF.tiffopen(filename)
+
+    N = length( f.dims );
+    T = eltype(f); 
+
+    axes = StepRange.( 1, sample[1:N], f.dims )
+
+    LIBTIFF.tiffclose(f)
+
+    return T, length.( axes )
+end
 
 """ READING SCANLINE TIFFs """
 
